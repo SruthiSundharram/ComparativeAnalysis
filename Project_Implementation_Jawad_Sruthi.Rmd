@@ -1,0 +1,361 @@
+---
+title: "Project_Implementation"
+author: "Abdul Jawad & Sruthi Sundharram"
+date: "2023-05-02"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library('seqinr')
+library('Biostrings')
+library('bioseq')
+library('ggplot2')
+library('ape')
+
+### Initializing Necessary Functions
+source('Functions.R')
+```
+
+I. Bioinformatics Project - A Comparative Study between the Borrelia and Babesia Species in the investigation of Lyme disease
+
+Questions we would like to explore:
+
+  - What factors make a carrier to be compatible with a disease?
+  - How closely related/similar are the Babesia and Burgdoferi species?
+  - What similarities does the DNA of the Black-legged Tick share with the two bacterium?
+  - Why are certain species more susceptible to Lyme disease than others? Do they share similarities?
+  
+Sections:
+  - Bacteria Strands selected:
+      - 2 Borreliella Burgdorferi plasmids,
+      - Borrelia Maayonii,
+      - Borrelia Turicatae
+      - 2 Babesia Microti strain genomes,
+      - Babesia Divergens gene,
+      - Babesia Canis gene
+      
+      - All exist within the Midwest,
+      - Burgdorferi causes Lyme disease, and Babesia cause Babesiosis
+      - Similar Hosts
+      
+  - Main Carrier subject: Black-Legged Tick
+  - Hosts considered in this study: 
+  
+    Burgdorferi hosts:
+    - White-tailed deer(Odocoileus virginanus)- not infected,
+    - white-footed mouse (permissive host), 
+    - Humans
+    
+    Babesiosis Hosts:
+    - White-tailed deer
+    - Humans
+    - White-footed mouse
+    - Cattle
+    - Dogs
+    
+    
+  i. Retrieving multiple DNA sequences of each bacteria
+  ii. GC Content
+      - Performing GC content analysis, to detect the melting temperature of the DNA and relate it with the body temperatures of the carrier hosts.
+      - Finding representation level of GC content in each of the sequences.
+      
+  iii. Basic Comparative Analysis on Protein Sequences
+      - Convert DNA to Protein, and plot amino acid content of each bacteria sequence.
+      - DotPlot Comparison of two DNA sequences, then the Protein versions.
+            - For Identifying homologous regions/identical acids/nucleotides at similar positions.
+      
+  iv. Alignment on Protein Sequences
+      - Global or Local alignment between the two bacteria species depending on:
+            - Global: If homologous entirely
+            - Local: If homologous regions are shared in parts
+            - Overlap: If only ends match
+            - Using Both PAM and BLOSUM scoring
+      - Check for Alignment Significance
+      
+  v. Phylogenetic Tree on Protein Sequences
+      - Performing multiple sequence Alignment of the THREE Strands
+      - Distance Matrix
+      - Construct Bootstrapped Rooted Tree, with one or two outgroups
+      
+  vi. Comparison between Hosts
+      - GC content analysis on each sequence
+      - Dotplot comparison
+      - Multiple Pairwise Alignments
+      - Rooted Boostrapped Phylogenetic tree
+      
+      
+
+  
+# I. GC CONTENT and BASE COMPOSITION ANALYSIS  
+
+i. Retrieving the Following Sequences:
+  - Borrelia burgdorferi Bol26 plasmid Bol26_cp26 complete sequence (Accession=CP001568, 26523 bp circular DNA)
+  - Borrelia burgdorferi Bol26 plasmid Bol26_lp28-4, complete sequence (Accession = CP001569, 28812 bp linear DNA)
+  
+  - Borrelia maayonii strain MN14-1539 plasmid lp28-3, complete sequence (Accession = CP015806, 27809 bp, DNA linear)
+  - Borrelia turicatae 91E135 isolate Oz1 plasmid lpG29, complete sequence (Accession = CP019367 , 28724 bp DNA linear )
+
+  - Babesia microti strain RI apicoplast complete genome (Accession=LK028575, 28657 bp circular DNA)
+  - Babesia microti strain RI mitochondrion, isoform 2 complete genome (Accession=LN871601, 10547 bp linear DNA)
+  
+  - Babesia divergens hsp70 gene for heat shock protein 70, complete cds, isolate: BdivUK (Accession=AB248739, 1944 bp DNA linear)
+  - Babesia canis vogeli heat shock protein 70 (hsp70) gene, complete cds (EF527401 1944 bp DNA linear)
+  
+```{r}
+choosebank("genbank")
+
+### Borrelia burgdorferi
+borrelia_burg1 <- query('Borrelia Bol26_1', 'AC=CP001568')
+borrelia_burg2 <- query('Borrelia Bol26_2', 'AC=CP001569')
+
+### Borrelia mayonii
+borrelia_maayonii <- query('Borrelia_mayonii', 'AC=CP015806')
+
+### Borrelia turicatae
+borrelia_turicatae <- query('Borrelia_turicatae', 'AC=CP019367 ')
+
+### Babesia Microti
+babesia_microti1 <- query('Babesia_Microti_1', 'AC=LK028575')
+babesia_microti2 <- query('Babesia_Microti_2', 'AC=LN871601')
+
+### Babesia divergens
+babesia_divergens <- query('Babesia_divergens', 'AC=AB248739')
+
+### Babesia canis
+babesia_canis <- query('Babesia_canis', 'AC=EF527401')
+```
+
+ii. Extracting the sequences from each query.
+```{r}
+### Borrelia burgdorferi
+bor_burg_seq1         <-     getSequence(borrelia_burg1$req[[1]])
+bor_burg_seq2         <-     getSequence(borrelia_burg2$req[[1]])
+
+### Borrelia mayonii
+bor_maayonii_seq      <-     getSequence(borrelia_maayonii$req[[1]])
+
+### Borrelia turicatae
+bor_turicatae_seq     <-     getSequence(borrelia_turicatae$req[[1]])
+
+### Babesia Microti
+bab_microti_seq1      <-     getSequence(babesia_microti1$req[[1]])
+bab_microti_seq2     <-     getSequence(babesia_microti2$req[[1]])
+
+### Babesia divergens
+bab_divergens_seq1    <-     getSequence(babesia_divergens$req[[1]])
+
+### Babesia canis
+bab_canis             <-     getSequence(babesia_canis$req[[1]])
+```
+      
+Through the GC composition of a DNA sequence, we get to know its 'melting point', or the temperature at which a double stranded DNA is denatured into a single strand.  The relationship between the GC content of a sequence and its melting point is usually directly proportional. Performing an analysis of the GC composition can provide insight into a possible factor of the black-legged tick being temperature-compatible carrier of the borrelia burgdorferi and the babesia species.
+According to Burtis et al. (2022), black-legged ticks (ixodes Scapularis) are active as long as the temperature is above 4 deg C, with their behavior reaching a peak at a threshold of 25 C. 
+The relationship between the melting temperature and GC composition can be modelled by the equation: T=69+0.41(GC content)-(500/Length of DNA).
+
+iii. Using this established equation, the dataframe below displays each sequence along with its GC composition and the calculated melting temperature.
+
+```{r}
+Seq_name          <- c('Burgdorferi Plasmid 1', 'Burgdorferi Plasmid 2', 'Maayonii', 'Turicatae','Microti apicoplast', 'Microti mitochondrion', 'Divergens','Canis')
+Genus_name        <- c('Borrelia', 'Borrelia', 'Borrelia', 'Borrelia','Babesia', 'Babesia', 'Babesia', 'Babesia')
+GC_content        <- c(GC(bor_burg_seq1),GC(bor_burg_seq2),GC(bor_maayonii_seq),GC(bor_turicatae_seq),
+                     GC(bab_microti_seq1), GC(bab_microti2_seq2),GC(bab_divergens_seq1),GC(bab_canis))
+
+Melting_Temp_in_C <- c(69+0.41*(GC(bor_burg_seq1)-(500/length(bor_burg_seq1))),69+0.41*(GC(bor_burg_seq2)-(500/length(bor_burg_seq2))),69+0.41*(GC(bor_maayonii_seq)-(500/length(bor_maayonii_seq))), 69+0.41*(GC(bor_turicatae_seq)-(500/length(bor_turicatae_seq))), 69+0.41*(GC(bab_microti_seq1)-(500/length(bab_microti_seq1))), 69+0.41*(GC(bab_microti_seq2)-(500/length(bab_microti_seq2))), 69+0.41*(GC(bab_divergens_seq1)-(500/length(bab_divergens_seq1))), 69+0.41*(GC(bab_canis))-(500/length(bab_canis)))
+
+seq_df <- data.frame(Seq_name,Genus_name,GC_content,Melting_Temp_in_C)
+seq_df
+```
+As seen from the above dataframe, the melting points of all the sequences (with their individual lengths taken into consideration) is well above the temperature at which black-legged ticks thrive in, eliminating any chances of the DNA being melted or denatured under usual circumstances. It could be noted that the Borrelia Turicatae seems to have a slightly higher GC composition than that of its counterparts, which all share similar GC levels and also happen to be agents of lyme disease. Based on the formula, all the sequences seem to share very similar melting points as well.
+
+The lowest GC content (14%) belongs to the Microti apicoplast sequence, likely due to it being derived from a plastid, or the green structure within plant cells that help in storing food. Apicoplasts, being vestigial, do not serve any other function except as a sign of an evolutionary past originating from plants/algae. Moreover, they contain the lowest GC composition on average when compared to all other types of plastids. On the other hand, the mitochondrion sequence possesses a high level of GC content.
+
+
+iv. Comparison of Base Composition of two Sequences:
+  - Borrelia burgdorferi Bol26 plasmid Bol26_lp28-4
+  - Babesia microti strain RI apicoplast
+  
+```{r}
+par(mfrow = c(1,2))
+
+pie(base.freq(as.DNAbin(bor_burg_seq2)), radius = 1.0, main="Borrelia burgdorferi plasmid")
+pie(base.freq(as.DNAbin(bab_microti_seq1)), radius = 1.0, main = "Babesia microti strain apicoplast")
+```
+
+      
+# II. Finding ORFs and Dotplot Comparison Analysis
+
+For this section, we will be using two sequences as our primary subject of comparison:
+  - Borrelia burgdorferi Bol26 plasmid Bol26_lp28-4
+  - Babesia microti strain RI apicoplast
+  
+i. Getting a visual idea of where in each of the sequences could the potential genes be located. 
+The Upper plot is represented by the Borrelia sequence, while the second plot represents the Babesia sequence
+```{r}
+par(mfrow = c(2,1))
+plotORFsinSeq(c2s(bor_burg_seq2))
+plotORFsinSeq(c2s(bab_microti_seq1))
+```
+
+      
+ii. Finding Open Reading Frames, or potential genes within each of the 2 sequences.
+```{r}
+bor_ORFs<-findORFsinSeq(c2s(bor_burg_seq2))
+bab_ORFs <- findORFsinSeq(c2s(bab_microti_seq1))
+```
+
+```{r}
+bor_ORFs[[3]][1:261]
+```
+
+```{r}
+bab_ORFs[[3]]
+```
+
+A few ORFs were found to have semi-idential nucleotide occurences in similar positions. While this does not make them homologous, it is still worthy of investigation.
+```{r}
+# Notable ORF Positions 5, 230, 198, 253, 30, 50, 90
+# 
+# par(mfrow = c(2,1))
+dotPlot(bor_burg_seq2[bor_ORFs[[1]][198]:bor_ORFs[[2]][198]], bab_microti_seq1[bab_ORFs[[1]][198]:bab_ORFs[[2]][198]])
+```
+```{r}
+dotPlot(bor_burg_seq2[bor_ORFs[[1]][50]:bor_ORFs[[2]][50]], bab_microti_seq1[bab_ORFs[[1]][50]:bab_ORFs[[2]][50]])
+```
+
+```{r}
+dotPlot(bor_burg_seq2[bor_ORFs[[1]][90]:bor_ORFs[[2]][90]], bab_microti_seq1[bab_ORFs[[1]][90]:bab_ORFs[[2]][90]])
+```
+
+   
+# III. Pairwise Alignments
+
+In this Section, we will:
+
+- Obtain the Local/Global Alignment Scores of Borellia Burgdorferi Plasmid and Babesia Microti apicoplast using a custom substitution matrix.
+- To Compensate for the low amount of identical genes, the match/mismatch scores are kept at 4/-5, following the logic followed by the NCBI and European Bioinformatics Institute.
+
+```{r}
+sub = nucleotideSubstitutionMatrix(match=4, mismatch=-5, baseOnly=TRUE, type="DNA", symmetric = TRUE)
+```
+
+
+```{r}
+## Local because they are a non-homologous pair
+pw_Alignment <- Biostrings::pairwiseAlignment(pattern=DNAString(c2s(bor_burg_seq2)),subject= DNAString(c2s(bab_microti_seq1)), gapOpening = 1, gapExtension = 2, substitutionMatrix = sub, type='local' )
+```
+
+```{r}
+### Local Alignment Score using normal rules
+pw_Alignment
+```
+Checking if the score obtained is significant
+```{r}
+
+random_1 <- generateSeqsWithMultinomialModel(c2s(bor_burg_seq2), 10)
+score_list1 <- c()
+
+```
+
+
+```{r}
+
+for (x in 1:length(random_1)) {
+  score1<-pairwiseAlignment(pattern = DNAString(c2s(bab_microti_seq1)), subject = DNAString(c2s(random_1[x])), gapOpening = 1, gapExtension = 2, substitutionMatrix = sub, type = 'local', scoreOnly=TRUE )
+  score_list1 <- append(score_list1, score1)
+  
+}
+
+score_list1
+histogram1 <- hist(score_list1)
+sum(score_list1>33712)/length(score_list1)
+```
+
+
+Inferring from the P-Value, it seems that the local alignment using the above rules is greater than 0.05, making it a statistically insignificant local alignment score. 
+
+
+# IV. Protein Analysis
+
+In this section:
+  - PAM250 scoring will be used for local alignment
+  - Specific amino acid chains will be hand-picked from each of the sequences mentioned at the top of this report based on similar length. An Ixodes Scapularis amino acid chain is      also included.
+  - They will be aligned with each other using CLUSTAL,
+  - A DNA distance matrix will be created,
+  - A bootstrapped phylogenetic tree will be generated for ancestral analysis.
+  
+
+i. Trying out PAM250 scoring on the Borellia plasmid and Babesia Microti apicoplast sequences after converting them to amino acid chains.
+```{r}
+### Translation to Protein Sequence
+burgdorferi_seq2_protein <- translate(bor_burg_seq2)
+microti_seq1_protein   <- translate(bab_microti_seq1)
+microti_seq2_protein   <-  translate(bab_microti_seq2)
+```
+
+```{r}
+data("PAM250")
+protein_Alignment <- Biostrings::pairwiseAlignment(pattern=c2s(burgdorferi_seq2_protein),subject=c2s(microti_seq1_protein), gapOpening = 1, gapExtension = 2, substitutionMatrix = PAM250, type='local' )
+```
+
+```{r}
+protein_Alignment
+```
+A much better local alignment score is obtained when the sequences are converted to protein sequences and are aligned using PAM scoring. Since the two bacteria sequences are not closely related with one another, protein sequences are preferred over nucleotide sequences due to them being less noisy thanks to their slower mutation/evolutionary rates.
+
+
+ii. Multiple Sequence Alignment
+
+Proteins picked for alignment:
+
+- ABQ01419.1 heat shock protein 70 [Babesia vogeli]
+- BAF02616.1 heat shock protein 70 [Babesia divergens]
+- CDR32607.1 ATP-dependent Clp protease (apicoplast) [Babesia microti strain RI]
+- CTQ41574.1 cytochrome c oxidase subunit I (mitochondrion) [Babesia microti strain RI]
+- ASJ27715.1 PF-57-type protein (plasmid) [Borrelia turicatae 91E135]
+- WP_075552332.1 methyl-accepting chemotaxis protein [Borreliella mayonii]
+- ACO37875.1 pts system, iibc component (plasmid) [Borreliella burgdorferi Bol26]
+- WP_231037133.1 DNA translocase FtsK, partial [Borreliella burgdorferi]
+- EEC20487.1 transposase, putative [Ixodes scapularis]
+
+Reading Resulting ClustalOMEGA Alignment 
+```{r}
+prot_aligns <- read.alignment('prot_align_Blosum.clustalw', format = 'clustal')
+prot_aligns
+```
+
+The Distance Matrix generated:
+```{r}
+dist_matrix <- dist.alignment(prot_aligns)
+dist_matrix
+```
+Due to the alignment containing many gaps, we clean it, keeping 66% of nongap letters and 33% of identical ones.
+```{r}
+align_clean <- cleanAlignment(prot_aligns, minpcnongap = 66, minpcid = 33)
+dist_matrix2 <- dist.alignment(align_clean)
+dist_matrix2
+```
+FOR REFERENCE:
+- ABQ01419.1 heat shock protein 70 [Babesia vogeli]
+- BAF02616.1 heat shock protein 70 [Babesia divergens]
+- CDR32607.1 ATP-dependent Clp protease (apicoplast) [Babesia microti strain RI]
+- CTQ41574.1 cytochrome c oxidase subunit I (mitochondrion) [Babesia microti strain RI]
+- ASJ27715.1 PF-57-type protein (plasmid) [Borrelia turicatae 91E135]
+- WP_075552332.1 methyl-accepting chemotaxis protein [Borreliella mayonii]
+- ACO37875.1 pts system, iibc component (plasmid) [Borreliella burgdorferi Bol26]
+- WP_231037133.1 DNA translocase FtsK, partial [Borreliella burgdorferi]
+- EEC20487.1 transposase, putative [Ixodes scapularis]
+
+Generating a rooted Boostrapped tree:
+```{r}
+phylo_prot_rooted <- rootedNJtree(align_clean, theoutgroup = 'EEC20487.1', type='protein')
+```
+Observations from the phylogenetic tree above:
+    - The strong confidence value shared by BAF02616.1 and ABQ011419.1, both being heat shock proteins belonging to the Babesia species, was not surprising.
+    - It was very interesting to see that ACO37875.1 (Borreliella burgdorferi plasmid) and CTQ41574.1 (Babesia mitochondrion) shared a much higher confidence value than the Babesia               apicoplast protein.
+    - Despite being one of the very species of Borellia other than the burgdorferi that can cause Lyme disease, the Boreliella mayonii (WP075552332.1) had a weak association with the former. This        can provide insight into how the Borellia is slowly mutating into vastly different structures over time.
+    - Even the Borellia turicatae and burgdorferi pair (ASJ27715.1 and WP231037133.1) did not have as strong of a confidence value with each other as initially thought.
+    - The very high confidence value shared by the black-legged tick (EEC20487.1) with the rest of the tree is fascinating. Being a compatible carrier of most, if not all of the          bacterium in the phylogenetic tree may have implications that it could share an ancestor as well.
